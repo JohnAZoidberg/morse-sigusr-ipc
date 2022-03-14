@@ -1,23 +1,22 @@
 use std::env;
-use std::io::{self, Write}; 
+use std::io::{self, Write};
 use std::process;
-use std::thread;
-use std::{time, time::Instant, time::Duration};
 use std::sync::{Arc, Mutex};
+use std::thread;
+use std::{time, time::Duration, time::Instant};
 
 use signal_hook::{iterator::Signals, SIGUSR1, SIGUSR2};
 
-use MorseSignal::{Short, Long};
+use MorseSignal::{Long, Short};
 
 fn server() {
     println!("Listening for signals at PID {}", process::id());
-    let signals = Signals::new(&[SIGUSR1, SIGUSR2])
-        .expect("Couldn't register signal handlers");
+    let signals = Signals::new(&[SIGUSR1, SIGUSR2]).expect("Couldn't register signal handlers");
 
-    let mut signal_mutex: Arc<Mutex<Vec<MorseSignal>>> = Arc::new(Mutex::new(vec![]));
+    let signal_mutex: Arc<Mutex<Vec<MorseSignal>>> = Arc::new(Mutex::new(vec![]));
     let thread_queue_mut = signal_mutex.clone();
 
-    let mut start_mutex: Arc<Mutex<Option<Instant>>> = Arc::new(Mutex::new(None));
+    let start_mutex: Arc<Mutex<Option<Instant>>> = Arc::new(Mutex::new(None));
     let thread_start_mut = start_mutex.clone();
 
     thread::spawn(move || {
@@ -45,7 +44,7 @@ fn server() {
                     (*signal_queue).clear();
                     (*signal_queue).push(signal);
                     *mut_start = Some(Instant::now());
-                },
+                }
                 // Space
                 70 => {
                     let decoded = MorseSignal::to_char(&*signal_queue);
@@ -57,15 +56,15 @@ fn server() {
 
                     print!(" ");
                 }
-                x => { panic!("Other time {}", x) },
+                x => panic!("Other time {}", x),
             }
 
             *mut_start = Some(Instant::now());
         }
     });
 
-    let loop_queue_mut = signal_mutex.clone();
-    let loop_start_mut = start_mutex.clone();
+    let loop_queue_mut = signal_mutex;
+    let loop_start_mut = start_mutex;
     loop {
         thread::sleep(time::Duration::from_millis(10));
         let mut mut_start = loop_start_mut.lock().unwrap();
@@ -74,7 +73,7 @@ fn server() {
 
             // End of message
             let time = round_nearest_multiple(start.elapsed().as_millis() as u64, 10);
-            if time > 70 && (*signal_queue).len() > 0 {
+            if time > 70 && !(*signal_queue).is_empty() {
                 let decoded = MorseSignal::to_char(&*signal_queue);
                 println!("{}", decoded);
 
@@ -104,7 +103,9 @@ fn client(server_pid: u32) {
         io::stdout().flush().expect("Could not flush stdout");
 
         let mut input = String::new();
-        io::stdin().read_line(&mut input).expect("error: unable to read user input");
+        io::stdin()
+            .read_line(&mut input)
+            .expect("error: unable to read user input");
         send_morse(server_pid, &input.trim());
     }
 }
@@ -127,7 +128,7 @@ impl MorseSignal {
     fn to_int(&self) -> i32 {
         match self {
             Short => 10,
-            Long  => 12,
+            Long => 12,
         }
     }
 
@@ -159,38 +160,39 @@ impl MorseSignal {
             'x' => vec![Long, Short, Short, Long],
             'y' => vec![Long, Short, Long, Long],
             'z' => vec![Long, Long, Short, Short],
-            _   => vec![],
+            _ => vec![],
         }
     }
 
+    #[rustfmt::skip]
     fn to_char(signals: &[MorseSignal]) -> char {
         match signals {
-          [Long, Short, Short, Short]  => 'b',
-          [Long, Short, Long, Short]   => 'c',
-          [Short, Short, Long, Short]  => 'f',
+          [Long,  Short, Short, Short]  => 'b',
+          [Long,  Short, Long,  Short]   => 'c',
+          [Short, Short, Long,  Short]  => 'f',
           [Short, Short, Short, Short] => 'h',
-          [Short, Long, Long, Long]    => 'j',
-          [Short, Long, Short, Short]  => 'l',
-          [Short, Long, Long, Short]   => 'p',
-          [Long, Long, Short, Long]    => 'q',
-          [Short, Short, Short, Long]  => 'v',
-          [Long, Short, Short, Long]   => 'x',
-          [Long, Short, Long, Long]    => 'y',
-          [Long, Long, Short, Short]   => 'z',
-          [Long, Short, Short]         => 'd',
-          [Long, Long, Short]          => 'g',
-          [Long, Short, Long]          => 'k',
-          [Long, Long, Long]           => 'o',
-          [Short, Long, Short]         => 'r',
-          [Short, Short, Short]        => 's',
-          [Short, Short, Long]         => 'u',
-          [Short, Long, Long]          => 'w',
-          [Short, Long]                => 'a',
-          [Long, Long]                 => 'm',
-          [Short, Short]               => 'i',
-          [Long, Short]                => 'n',
-          [Short]                      => 'e',
-          [Long]                       => 't',
+          [Short, Long,  Long,  Long ]   => 'j',
+          [Short, Long,  Short, Short]  => 'l',
+          [Short, Long,  Long,  Short]   => 'p',
+          [Long,  Long,  Short, Long ]   => 'q',
+          [Short, Short, Short, Long ] => 'v',
+          [Long,  Short, Short, Long ]  => 'x',
+          [Long,  Short, Long,  Long ]   => 'y',
+          [Long,  Long,  Short, Short]   => 'z',
+          [Long,  Short, Short       ]  => 'd',
+          [Long,  Long,  Short       ]   => 'g',
+          [Long,  Short, Long        ]  => 'k',
+          [Long,  Long,  Long        ]   => 'o',
+          [Short, Long,  Short       ]  => 'r',
+          [Short, Short, Short       ] => 's',
+          [Short, Short, Long        ] => 'u',
+          [Short, Long,  Long        ]  => 'w',
+          [Short, Long               ] => 'a',
+          [Long,  Long               ]  => 'm',
+          [Short, Short              ] => 'i',
+          [Long,  Short              ]  => 'n',
+          [Short                     ] => 'e',
+          [Long                      ] => 't',
           _                            => panic!("Invalid code: {:?}", signals),
         }
     }
@@ -208,14 +210,16 @@ fn send_morse(pid: u32, content: &str) {
 
         for signal in MorseSignal::from_char(c) {
             print!(" {:?}", signal);
-            unsafe { libc::kill(pid as i32, signal.to_int()); }
+            unsafe {
+                libc::kill(pid as i32, signal.to_int());
+            }
             thread::sleep(time::Duration::from_millis(10));
         }
 
         // Sleep extra 20 so that we sleep 30ms in between characters
         thread::sleep(time::Duration::from_millis(20));
     }
-    println!("");
+    println!();
 }
 
 fn main() {
@@ -230,7 +234,7 @@ fn main() {
             }
 
             client(args[2].parse().unwrap())
-        },
-        _ => println!("Must provide either `in` or `out` as first argument")
+        }
+        _ => println!("Must provide either `in` or `out` as first argument"),
     }
 }
