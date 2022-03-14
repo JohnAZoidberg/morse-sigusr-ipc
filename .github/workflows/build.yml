@@ -1,0 +1,55 @@
+
+on:
+  # Build all PRs
+  pull_request:
+  # Build only pushes to master and github-actions branch
+  # (To avoid building PR branches twice)
+  push:
+    branches: [ master, github-actions ]
+
+jobs:
+  check:
+    name: Check
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout sources
+        uses: actions/checkout@v2
+
+      - name: Install minimal stable toolchain with rustfmt and clippy
+        uses: actions-rs/toolchain@v1
+        with:
+          profile: minimal
+          toolchain: stable
+          override: true
+          components: rustfmt, clippy
+
+      - name: Check with clippy
+        uses: actions-rs/cargo@v1
+        with:
+          command: clippy
+
+      - name: Check with rustfmt
+        if: always()  # Even run if clippy failed
+        uses: actions-rs/cargo@v1
+        with:
+          command: fmt
+          args: -- --check
+
+  build:
+    name: Build with Cargo
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout sources
+        uses: actions/checkout@v2
+
+      - name: Install minimal stable toolchain
+        uses: actions-rs/toolchain@v1
+        with:
+          profile: minimal
+          toolchain: stable
+          override: true
+
+      - name: Build
+        uses: actions-rs/cargo@v1
+        with:
+          command: build
