@@ -13,10 +13,10 @@ fn server() {
     println!("Listening for signals at PID {}", process::id());
     let signals = Signals::new(&[SIGUSR1, SIGUSR2]).expect("Couldn't register signal handlers");
 
-    let mut signal_mutex: Arc<Mutex<Vec<MorseSignal>>> = Arc::new(Mutex::new(vec![]));
+    let signal_mutex: Arc<Mutex<Vec<MorseSignal>>> = Arc::new(Mutex::new(vec![]));
     let thread_queue_mut = signal_mutex.clone();
 
-    let mut start_mutex: Arc<Mutex<Option<Instant>>> = Arc::new(Mutex::new(None));
+    let start_mutex: Arc<Mutex<Option<Instant>>> = Arc::new(Mutex::new(None));
     let thread_start_mut = start_mutex.clone();
 
     thread::spawn(move || {
@@ -63,8 +63,8 @@ fn server() {
         }
     });
 
-    let loop_queue_mut = signal_mutex.clone();
-    let loop_start_mut = start_mutex.clone();
+    let loop_queue_mut = signal_mutex;
+    let loop_start_mut = start_mutex;
     loop {
         thread::sleep(time::Duration::from_millis(10));
         let mut mut_start = loop_start_mut.lock().unwrap();
@@ -73,7 +73,7 @@ fn server() {
 
             // End of message
             let time = round_nearest_multiple(start.elapsed().as_millis() as u64, 10);
-            if time > 70 && (*signal_queue).len() > 0 {
+            if time > 70 && !(*signal_queue).is_empty() {
                 let decoded = MorseSignal::to_char(&*signal_queue);
                 println!("{}", decoded);
 
@@ -219,7 +219,7 @@ fn send_morse(pid: u32, content: &str) {
         // Sleep extra 20 so that we sleep 30ms in between characters
         thread::sleep(time::Duration::from_millis(20));
     }
-    println!("");
+    println!();
 }
 
 fn main() {
